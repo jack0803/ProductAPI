@@ -1,15 +1,17 @@
 const { dbConnection } = require('../db/config.js');
 const { dataStatusText, pageConfig } = require('../config/index.js');
+const { viewByCategoryName } = require('../models/category.model.js');
 
-const tableName = 'product';
+const tableName = 'products';
+const tableName2 = 'categories';
 
 const create = async data => {
 	console.log("in model");
-    const query = `INSERT INTO ${tableName} (sku , name , description , status , created_at , updated_at) VALUES (? , ? , ? , ? , ? , ?)`;
+    const query = `INSERT INTO ${tableName} (sku , name , description , status , created_at , updated_at , category_sku) VALUES (? , ? , ? , ? , ? , ? , ?)`;
 	console.log(data.description);
 	console.log(data.name);
 
-    const params = [data.sku , data.name , data.description , data.status, data.created_at , data.updated_at];
+    const params = [data.sku , data.name , data.description , data.status, data.created_at , data.updated_at , data.category_sku];
 
     const qData = await dbConnection.query(query , params);
 
@@ -17,17 +19,30 @@ const create = async data => {
     return qData.insertId || null;
 };
 
-const list = async (page, limit , info) => {
+const list = async (page, limit , category_sku, category_name, info) => {
 	const qData = {
 		data: [],
 		totalRows: ''
 	};
 	let limitString = '';
 	let query_str = '';
+	if(category_sku){
+		query_str = ' && category_sku =?';
+	}else if(category_name){
+		console.log("inside");
+		console.log(category_name);
+		//first we have to find name from category table and from that we are able to find the category_sku of category
+		const temp = await viewByCategoryName(category_name);
+		if(temp){
+			console.log("temp:"+temp);
+			query_str = ` && category_sku =${temp.sku}`;
+		}
+		
+	}
 
 	if (page) {
 		console.log("inside page");
-		const countQuery = `SELECT count(id) as total from ${tableName} where status !=? ${query_str}`;
+		const countQuery = `SELECT count(id) as total from ${tableName} where status !=? `;
 		const countParams = [dataStatusText.DELETED];
 		const countData = await dbConnection.query(countQuery, countParams);
 		qData['totalRows'] = Number(countData[0]['total']);
@@ -36,9 +51,10 @@ const list = async (page, limit , info) => {
 		limitString = `LIMIT ${limit} OFFSET ${offset}`;
 		console.log(pageConfig.PRODUCTS);
 	}
-
-	const query = `SELECT sku,name,description,status,created_at,updated_at from ${tableName} where status !=? ${limitString} `;
-	const params = [dataStatusText.DELETED];
+	// mqsql qurey to join the tables
+	// SELECT * FROM product INNER JOIN category ON product.category_sku=category.sku;
+	const query = `SELECT * from ${tableName} INNER JOIN ${tableName2} ON ${tableName}.category_sku=${tableName2}.sku where ${tableName}.status !=? ${query_str} ${limitString} `;
+	const params = [dataStatusText.DELETED , category_sku];
 	const resultData = await dbConnection.query(query, params);
 	qData['data'] = resultData || [];
 	return qData;
@@ -61,9 +77,9 @@ const viewByName = async id => {
 };
 
 const update = async (id, data) => {
-	const query = `UPDATE ${tableName} SET sku=?,name=?,description=?,status=?,updated_at=? where sku=?`;
+	const query = `UPDATE ${tableName} SET sku=?,name=?,description=?,status=?,updated_at=?,category_sku=? where sku=?`;
 
-	const params = [data.sku, data.name, data.description, data.status, data.updated_at, id];
+	const params = [data.sku, data.name, data.description, data.status, data.updated_at, data.category_sku,id];
 
 	const qData = await dbConnection.query(query, params);
 	return qData.affectedRows || null;

@@ -42,6 +42,7 @@ module.exports = {
 	pageConfig: {
 		DEFAULT: 10,
 		USERS: 10,
-		PRODUCTS: 10
+		PRODUCTS: 10,
+		CATEGORIES: 10
 	}
 };

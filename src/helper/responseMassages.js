@@ -12,6 +12,13 @@ module.exports = {
 		INVALID_SKU: 'Product does not exists',
 		PRODUCT_EXISTS: 'Product is already Listed in Database.',
 		
+	},
+	CATEGORY: {
+		NOT_FOUND: 'No Category Found.',
+		CREATED_SUCCESS: 'Category Created Successfully.',
+		FETCH_SUCCESS: 'Categorys Fetch Successfully.',
+		INVALID_SKU: 'Category does not exists',
+		CATEGORY_EXISTS: 'Category is already Listed in Database.',
 	}
 	
 }

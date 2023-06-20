@@ -1,7 +1,7 @@
-const product = require('../models/product.model.js');
+const category = require('../models/category.model.js');
 const { HTTP_STATUS_CODES, dataStatusText, pageConfig } = require('../config/index.js');
 const { convertTimestampToDate , processString } = require('../utils/data.utils.js');
-const { PRODUCT , errorMessages } = require('../helper/responseMassages.js');
+const { CATEGORY , errorMessages } = require('../helper/responseMassages.js');
 
 const create = async (data , params) => {
     let result = {
@@ -13,15 +13,13 @@ const create = async (data , params) => {
     try {
         //first we have to check weather the product already listed or not
         //---------------------
-        const productExist = await product.viewById(data.sku);
-		if(!productExist){
+        const categoryExist = await category.viewByCategoryId(data.sku);
+		if(!categoryExist){
 			//add new product to databse
 			console.log("try service");
-			const qdata = await product.create({
+			const qdata = await category.create({
 				sku: data.sku,
 				name: data.name.toString().toLowerCase().replace(/\s+/g, ' ').trim(),
-				description: data.description,
-				category_sku: data.category_sku,
 				status: dataStatusText.ACTIVE,
 				created_at: convertTimestampToDate(),
 				updated_at: convertTimestampToDate(),
@@ -32,7 +30,7 @@ const create = async (data , params) => {
 			console.log("inside else------>");
 			result.error = true;
 			result.status = HTTP_STATUS_CODES.BAD_REQUEST;
-			result.message = PRODUCT.PRODUCT_EXISTS;
+			result.message = CATEGORY.CATEGORY_EXISTS;
 		}
         
     } catch (error) {
@@ -53,21 +51,15 @@ const list = async (data, params , info) => {
 		currentPage: '',	
 		totalPages: ''
 	};
-
 	const page = info.queryData && info.queryData.page ? info.queryData.page : '';
 	const limit = info.queryData && info.queryData.limit ? info.queryData.limit : '';
-	const category_sku = info.queryData && info.queryData.category_sku ? info.queryData.category_sku : '';
-	const category_name = info.queryData && info.queryData.category_name ? info.queryData.category_name : '';
 	try {
-		
-		const qData = await product.list(page, limit , category_sku, category_name, info);
-	
+		const qData = await category.list(page, limit , info);
 		result.data = [];
 		qData.data.forEach(data => {
 			result.data.push({
 				sku: data.sku,
 				name: data.name,
-                description: data.description,
 				status: dataStatusText[data.status] || dataStatusText.NA,
                 created_at: data.created_at,
 				updated_at: data.updated_at
@@ -75,7 +67,7 @@ const list = async (data, params , info) => {
 		});
 		result['totalRows'] = Number(qData.totalRows);
 		result['currentPage'] = Number(page);
-		result['totalPages'] = Number(Math.ceil(Number(qData.totalRows) / pageConfig.PRODUCTS));
+		result['totalPages'] = Number(Math.ceil(Number(qData.totalRows) / pageConfig.CATEGORY));
 	} catch (e) {
 		result.error = true;
 		result.status = HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR;
@@ -84,7 +76,7 @@ const list = async (data, params , info) => {
 	return result;
 };
 
-const viewById = async (data, params, info) => {
+const viewByCategoryId = async (data, params, info) => {
 	const result = {
 		error: false,
 		data: {}
@@ -92,7 +84,7 @@ const viewById = async (data, params, info) => {
 	const id = Number(params.id) || 0;
 	//get data
 	try {
-		const qData = await product.viewById(id);
+		const qData = await category.viewByCategoryId(id);
 		if (qData) {
 			(qData.status = dataStatusText[qData.status] || dataStatusText.NA),
 				(qData.created_at = convertTimestampToDate(qData.created_at)),
@@ -111,7 +103,7 @@ const viewById = async (data, params, info) => {
 	return result;
 };
 
-const viewByName = async (data, params) => {
+const viewByCategoryName = async (data, params) => {
 	const result = {
 		error: false,
 		data: {}
@@ -120,7 +112,7 @@ const viewByName = async (data, params) => {
 	console.log("in service");
 	//get data
 	try {
-		const qData = await product.viewByName(name);
+		const qData = await category.viewByCategoryName(name);
 		if (qData) {
 			(qData.status = dataStatusText[qData.status] || dataStatusText.NA),
 				(qData.created_at = convertTimestampToDate(qData.created_at)),
@@ -150,15 +142,13 @@ const update = async (data, params) => {
 	//save data
 	try {
 		console.log("sevice try");
-		const qData = await product.viewById(id);
+		const qData = await category.viewByCategoryId(id);
 		console.log(qData);
 		if (qData) {
 			console.log("in if");
-			const saveData = await product.update(id, {
-				sku: data.sku || qData.id,
+			const saveData = await category.update(id, {
+				sku: data.sku || qData.sku,
 				name: data.name || qData.name,
-                description: data.description || qData.description,
-				category_sku: data.category_sku,
 				status: dataStatusText[data.status] || qData.status,
 				updated_at: convertTimestampToDate(),
 			});
@@ -187,9 +177,9 @@ const deleteById = async (data, params, info) => {
 	const id = Number(params.id) || 0;
 	//save data
 	try {
-		const qData = await product.viewById(id);
+		const qData = await category.viewByCategoryId(id);
 		if (qData) {
-			const saveData = await product.deleteById(id, {
+			const saveData = await category.deleteById(id, {
 				updated_at: convertTimestampToDate(),
 			});
 			result.data = saveData;
@@ -209,9 +199,8 @@ const deleteById = async (data, params, info) => {
 module.exports = {
     create,
 	list,
-	viewById,
-	viewByName,
+	viewByCategoryName,
+	viewByCategoryId,
 	update,
 	deleteById
 }
-
